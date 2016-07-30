@@ -4,6 +4,7 @@ var path = require("path");
 var bodyParser = require('body-parser');
 var Photon = require('./lib/photon');
 var photon = new Photon();
+var lightsStatus = 0;
 
 
 app.use(express.static(__dirname + '/views'));
@@ -51,8 +52,33 @@ board.on("ready", function() {
     .then(() => {
       app.listen(3030);
       console.log("Running at Port 3030");
-      this.on("exit", function() {
-        photon.turnOff()
-      });
     });
+
+  this.on("exit", function() {
+    console.log('=== end ===');
+    photon.turnOff();
+    led.off();
+  });
+
+  var led = new five.Led('D5');
+  led.on();
+
+  var photoresistor = new five.Sensor({
+     pin: "A2",
+     freq: 250
+  });
+  board.repl.inject({
+    pot: photoresistor
+  });
+  photoresistor.on("data", function() {
+    // console.log(this.value);
+    if (this.value < 980 && lightsStatus) {
+      photon.turnOff();
+      lightsStatus = 0;
+    } else if (this.value > 1000 && !lightsStatus) {
+      photon.turnOn();
+      lightsStatus = 1;
+    }
+  });
+
 });
